@@ -7,6 +7,42 @@ import requests
 import time
 import csv
 
+def clean_data():
+    # Define input, temp, and output filenames
+    input_filename = "restaurant_data.csv"
+    temp_filename = "restaurant_filtered.csv"
+    output_filename = "filtered_data.csv"
+
+    # Step 1: Filter data based on 'NY' in the address and write to a temporary file
+    with open(input_filename, mode='r', newline='', encoding='utf-8') as infile, \
+            open(temp_filename, mode='w', newline='', encoding='utf-8') as tempfile:
+        reader = csv.DictReader(infile)
+        writer = csv.DictWriter(tempfile, fieldnames=reader.fieldnames)
+
+        # Write the header to the temp file
+        writer.writeheader()
+
+        for row in reader:
+            # Check if 'NY' is in the address
+            if 'NY' in row.get('address', ''):
+                writer.writerow(row)
+
+    # Step 2: Read the temp file and create the final filtered_data.csv from it for ElasticSearch
+    with open(temp_filename, mode='r', newline='', encoding='utf-8') as tempfile, \
+            open(output_filename, mode='w', newline='', encoding='utf-8') as outfile:
+        reader = csv.DictReader(tempfile)
+        writer = csv.DictWriter(outfile, fieldnames=['businessID', 'category'])
+
+        # Write the header to the output file
+        writer.writeheader()
+
+        for row in reader:
+            # Write only the businessID and category columns to the output file
+            writer.writerow({'businessID': row['businessID'], 'category': row['category']})
+
+    print(f"Filtered data written to {output_filename}")
+
+
 def scrape_restaurant_data(api_key, api_url, search_categories):
     """Scrapes required data from Yelp restaurant businesses matching dining categories"""
     restaurant_data = []
