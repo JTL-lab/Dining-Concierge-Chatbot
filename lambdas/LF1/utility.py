@@ -3,9 +3,11 @@ import hashlib
 import calendar
 from datetime import datetime, timedelta, time
 import phonenumbers
+from word2number import w2n
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 EMAIL_PATTERN = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+AM_PM_PATTERN = r'^\d{1,2}(:[0-5][0-9])?(\s*[ap]m)?$'
 
 
 def utility_validate_date(date_string):
@@ -46,6 +48,14 @@ def utility_validate_date(date_string):
     return None
 
 
+def utility_validate_lex_ok_time(time_string):
+    # From the slot originalValue, bc otherwise lex will ask again for the dining time when calling delegate
+    if not re.match(AM_PM_PATTERN, time_string):
+        return None
+    else:
+        return time_string
+
+
 def utility_validate_dining_time(date_string, time_string):
     print(f'@utility_validate_dining_time: time_string {time_string}, date_string {date_string}')
     try:
@@ -54,16 +64,23 @@ def utility_validate_dining_time(date_string, time_string):
         return None
 
     cleaned_time_string = re.sub(r'[\s\.]', '', time_string).lower()
+
     if cleaned_time_string.endswith("pm"):
         cleaned_time_string = cleaned_time_string.replace("pm", "PM")
     elif cleaned_time_string.endswith("am"):
         cleaned_time_string = cleaned_time_string.replace("am", "AM")
 
-    try:
-        time_obj = datetime.strptime(cleaned_time_string, "%I%p").time()
-    except ValueError:
+    if ':' in cleaned_time_string: # check for 5:30pm or 14:30
         try:
-            time_obj = datetime.strptime(cleaned_time_string, "%H:%M").time()
+            if "PM" in cleaned_time_string or "AM" in cleaned_time_string:
+                time_obj = datetime.strptime(cleaned_time_string, "%I:%M%p").time()
+            else:
+                time_obj = datetime.strptime(cleaned_time_string, "%H:%M").time()
+        except ValueError:
+            return None
+    else:
+        try:
+            time_obj = datetime.strptime(cleaned_time_string, "%I%p").time()
         except ValueError:
             # Military time: 14:00 = 2:00 PM
             try:
@@ -78,6 +95,7 @@ def utility_validate_dining_time(date_string, time_string):
                 return None
 
     combined_datetime = datetime.combine(date_obj, time_obj)
+    print(f'combined_datetime: {combined_datetime}')
     if combined_datetime <= datetime.now():
         return None
     twelve_hour_datetime = combined_datetime.strftime("%Y-%m-%d %I:%M %p")
@@ -101,7 +119,7 @@ def utility_is_valid_usa_phone_number(phone):
         return False
 
 
-def utility_is_valid_party_size(number_of_people):
+def utility_is_valid_party_size_old(number_of_people):
     max_party_size = 1000
     try:
         num_of_ppl = int(number_of_people)
@@ -109,6 +127,25 @@ def utility_is_valid_party_size(number_of_people):
             return True
     except ValueError:
         pass
+    return False
+
+
+def utility_is_valid_party_size(number_of_people):
+    max_party_size = 1000
+
+    try:
+        num_of_ppl = int(number_of_people)
+        if 0 < num_of_ppl < max_party_size:
+            return True
+    except ValueError:
+        # Try to convert written numbers to integers
+        try:
+            num_of_ppl = w2n.word_to_num(number_of_people)
+            if 0 < num_of_ppl < max_party_size:
+                return True
+        except ValueError:
+            pass
+
     return False
 
 

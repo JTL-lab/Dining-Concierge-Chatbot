@@ -34,6 +34,63 @@ def elicit_slot(intent_name, slots, slot_name,
     return resp
 
 
+def elicit_slot_last_search(email, cuisine, location, session_attributes):
+    resp = {
+        'messages': [
+            {
+                'contentType': 'PlainText',
+                'content': 'Almost done. What date?',
+            }
+        ],
+        'sessionState': {
+            'sessionAttributes': session_attributes,
+            'dialogAction': {
+                'type': 'ElicitSlot',
+                'slotToElicit': 'DiningTime'
+            },
+            'intent': {
+                'name': 'DiningSuggestionsIntent',
+                'slots': {
+                    'Cuisine': {
+                        'shape': 'Scalar',
+                        'value': {
+                            'originalValue': cuisine,
+                            'resolvedValues': [cuisine],
+                            'interpretedValue': cuisine
+                        }
+                    },
+                    'DiningDate': 'None',
+                    'Email': {
+                        'shape': 'Scalar',
+                        'value': {
+                            'originalValue': email,
+                            'resolvedValues': [
+                                email
+                            ],
+                            'interpretedValue': email
+                        }
+                    },
+                    'NumberOfPeople': 'None',
+                    'PhoneNumber': 'None',
+                    'DiningTime': 'None',
+                    'Location': {
+                        'shape': 'Scalar',
+                        'value': {
+                            'originalValue': location,
+                            'resolvedValues': [
+                                location
+                            ],
+                            'interpretedValue': location
+                        }
+                    }
+                }
+            }
+        }
+    }
+    print('@elicit_slot_last_search: response ', resp)
+    return resp
+
+
 def elicit_intent(intent_name, session_attributes, messages):
     resp = {
         'messages': messages,
