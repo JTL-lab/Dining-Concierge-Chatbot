@@ -6,7 +6,7 @@ import hashlib
 from datetime import datetime
 import boto3
 from boto3.dynamodb.conditions import Key
-from lex_utility import build_validation_result, elicit_slot, elicit_intent, delegate, close, elicit_slot_last_search
+from lex_utility import build_validation_result, elicit_slot, elicit_intent, delegate, close
 from utility import utility_validate_date, utility_validate_dining_time, utility_is_valid_email, utility_is_valid_usa_phone_number, utility_is_valid_party_size, lowercase_string, utility_validate_lex_ok_time
 
 
@@ -251,22 +251,15 @@ def get_current_slot_from_session(session_attributes):
     return session_attributes.get('last_slot_filled', None)
 
 
-def get_slot_from_proposed_next_state(intent_request, session_attributes, history_exists=False):
+def get_slot_from_proposed_next_state(intent_request, session_attributes):
 
     if 'proposedNextState' in intent_request and 'dialogAction' in intent_request['proposedNextState']:
         if 'slotToElicit' in intent_request['proposedNextState']['dialogAction']:
             current_slot = intent_request['proposedNextState']['dialogAction']['slotToElicit']
             print(current_slot)
-            if current_slot == 'Location':
-                return 'Email'
-                
-            #if current_slot in slot_order:
-            #    index = slot_order.index(current_slot)
-            #    resp_slot = slot_order[index - 1]
-            #    return resp_slot 
-            #set_current_slot_in_session(session_attributes, current_slot)
-            #return current_slot
-    #return session_attributes.get('last_slot_filled', None)
+            set_current_slot_in_session(session_attributes, current_slot)
+            return current_slot
+    return session_attributes.get('last_slot_filled', None)
 
 
 def set_current_slot_in_session(session_attributes, current_slot):
@@ -439,7 +432,16 @@ def validate_dining_slot(intent_request, invocation_source, session_attributes):
 
     if invocation_source == 'DialogCodeHook':
         print(f"Inside DialogCodeHook invocation_source: {invocation_source}")
-        current_slot_name = get_slot_from_proposed_next_state(intent_request, session_attributes)
+
+        """
+        is_new_session = handle_is_new_session(intent_request, session_attributes)
+        print(f'is_new_session: {is_new_session}')
+        if is_new_session is False:
+            current_slot_name = get_current_slot_from_session(session_attributes)
+        else:
+            current_slot_name = None
+        """
+        current_slot_name = get_current_slot_from_session(session_attributes)
         print(f'current_slot_name {current_slot_name}')
         if not current_slot_name:
             current_slot_name = slot_order[0]
@@ -471,22 +473,18 @@ def validate_dining_slot(intent_request, invocation_source, session_attributes):
                     #slots['Cuisine']['value']['originalValue'] = cuisine
                     #slots['Cuisine']['value']['resolvedValues'] = cuisine
                     #slots['Cuisine']['value']['interpretedValue'] = cuisine
-                    if cuisine and location:
-                        #insert_last_search_info_to_slots(slots, location, cuisine)
-                        email = lowercase_string(get_slot_value(slots['Email']))
-                        response_last_search = elicit_slot_last_search(email, cuisine, location, session_attributes)
-                        return response_last_search
-                        #next_slot_index = slot_order.index(current_slot_name) + 3
+                    #if cuisine and location:
+                    #    next_slot_index = slot_order.index(current_slot_name) + 3
                     #
                     #else:
                     #    next_slot_index = slot_order.index(current_slot_name) + 1
-                    #next_slot_index = slot_order.index(current_slot_name) + 1
-                #else:
-                    #next_slot_index = slot_order.index(current_slot_name) + 1
+                    next_slot_index = slot_order.index(current_slot_name) + 1
+                else:
+                    next_slot_index = slot_order.index(current_slot_name) + 1
 
-                #if next_slot_index < len(slot_order):
-                #    next_slot = slot_order[next_slot_index]
-                #    set_current_slot_in_session(session_attributes, next_slot)
+                if next_slot_index < len(slot_order):
+                    next_slot = slot_order[next_slot_index]
+                    set_current_slot_in_session(session_attributes, next_slot)
             return resp_delegate
         else:
             print(f'Error: No slot value present for {current_slot_name}')
