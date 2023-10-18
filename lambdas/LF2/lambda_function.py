@@ -141,26 +141,33 @@ def lambda_handler(event, context):
     # Pull message from the SQS queue.
     response = sqs.receive_message(
         QueueUrl=SQS_QUEUE_HOST,
-        MaxNumberOfMessages=1
+        MaxNumberOfMessages=1,
+        MessageAttributeNames=['All']
     )
+    print(response)
     # UNCOMMENT FOR ACTUAL IMPLEMENTATION (this is just for testing)
-    #messages = response.get('Messages')
-    #if not messages:
-        #return "No messages in the SQS queue."
-    #print(f"messages: {messages}")
+    messages = response.get('Messages')
+    if not messages:
+        return "No messages in the SQS queue."
+    print(f"messages: {messages}")
     
     # Get first message
-    #message = messages[0]
+    message = messages[0]
+    print("Message pulled: {}".format(message))
     # Test case only: get rid of this later
-    message = event
+    #message = event
 
-    sqs_message_attributes = message['Records'][0]['messageAttributes']
-    email_address = sqs_message_attributes['Email']['StringValue']
-    phone_number = sqs_message_attributes['PhoneNumber']['StringValue']
-    cuisine = sqs_message_attributes['Cuisine']['StringValue']
-    num_people = sqs_message_attributes['NumberOfPeople']['StringValue']
-    time = sqs_message_attributes['DiningTime']['StringValue']
-    date = sqs_message_attributes['Date']['StringValue']
+    message_attributes = message.get('MessageAttributes', {})
+    email_address = message_attributes.get('Email', {}).get('StringValue', None)
+    phone_number = message_attributes.get('PhoneNumber', {}).get('StringValue', None)
+    cuisine = message_attributes.get('Cuisine', {}).get('StringValue', None)
+    num_people = message_attributes.get('NumberOfPeople', {}).get('StringValue', None)
+    time = message_attributes.get('DiningTime', {}).get('StringValue', None)
+    date = message_attributes.get('Date', {}).get('StringValue', None)
+    
+    # Delete message from the SQS queue
+    receipt_handle = message['ReceiptHandle']
+    sqs.delete_message(QueueUrl=SQS_QUEUE_HOST, ReceiptHandle=receipt_handle)
     
     # Get one random restaurant recommendation
     #restaurant_ids = get_random_restaurant_id(message_body['Cuisine'])
@@ -182,6 +189,3 @@ def lambda_handler(event, context):
         message = format_message(restaurant_list, restaurant_ids, num_people, date, time)
         if email_address:
             send_email(email_address, message)
-        # Send SMS message
-        #elif phone_number:
-            # send_sms(message_body['PhoneNumber'], sms_message)

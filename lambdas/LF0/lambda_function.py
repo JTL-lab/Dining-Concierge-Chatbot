@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 import logging
 from botocore.exceptions import ClientError
@@ -44,6 +43,8 @@ def handle_thank_you_intent(intent_request):
 
 def dispatch(intent_request):
     intent_name = intent_request['sessionState']['intent']['name']
+    print(f'@dispatch: {intent_name}')
+
     if intent_name == 'GreetingIntent':
         return handle_greeting_intent(intent_request)
     elif intent_name == 'ThankYouIntent':
@@ -87,21 +88,27 @@ def lambda_handler(event, context):
             # intent_name = response_from_lex['sessionState']['intent']['name']
             # print(f'intent_name: {intent_name}')
 
-            """
+            if resp_dispatch:
+                messages = resp_dispatch['messages']
+                # print(f'ALL of lex_msg_content: {lex_msg_content}')
+            else:
+                messages = response_from_lex.get('messages', [])
             lex_msg_content = ''
             delimiter = ' '
             index = 1
-            for message in response_from_lex:
-                print('@response_from_lex: message', message)
-                lex_msg_content += message['content'] + delimiter
+
+            for message in messages:
+                print('message: ', message)
+                if 'content' in message:
+                    lex_msg_content += message['content'] + delimiter
                 index += 1
                 print(f'lex_msg_content {index}: {lex_msg_content}')
 
             index = 0
             print(f'ALL of lex_msg_content: {lex_msg_content}')
-            current_timestamp = datetime.now()
-            print(f'current_timestamp: {current_timestamp}')
-            """
+            # current_timestamp = datetime.now()
+            # print(f'current_timestamp: {current_timestamp}')
+
             resp = {
                 'statusCode': 200,
                 'headers': {
@@ -111,7 +118,7 @@ def lambda_handler(event, context):
                     {
                         "type": "unstructured",
                         "unstructured": {
-                            "text": resp_dispatch
+                            "text": lex_msg_content
                         }
                     }
                 ]
